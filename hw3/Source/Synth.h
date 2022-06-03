@@ -77,26 +77,27 @@ struct FMVoice   : public juce::SynthesiserVoice
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////
         if ( !isRelease )
         {
-            if (( currentTime < attackTime) && ( attackTime > 0 ))
+            if (( currentTime < attackTime ) && ( attackTime > 0 ))
             {
                 //////////////////////////////////////////////////////////////////////////////////////////////////////
                 // Implement linear attack curve. ////////////////////////////////////////////////////////////////////
                 //////////////////////////////////////////////////////////////////////////////////////////////////////
-                return 1.0f; 
+                return (1.0f / attackTime) * currentTime;
             }
-            else if (( currentTime > attackTime) && ( currentTime - attackTime < decayTime )) 
+            else if (( currentTime > attackTime ) && ( currentTime - attackTime < decayTime )) 
             {
                 //////////////////////////////////////////////////////////////////////////////////////////////////////
                 // Implement exponential decay curve. ////////////////////////////////////////////////////////////////
                 //////////////////////////////////////////////////////////////////////////////////////////////////////
-                return 1.0f;
+                float k = ( log(sustainLevel) / decayTime );
+                return exp( k * (currentTime - attackTime) );
             }
             else
             {
                 //////////////////////////////////////////////////////////////////////////////////////////////////////
                 // Implement case for sustain. ///////////////////////////////////////////////////////////////////////
                 //////////////////////////////////////////////////////////////////////////////////////////////////////
-                return 1.0f;
+                return sustainLevel;
             } 
         }
         
@@ -111,7 +112,8 @@ struct FMVoice   : public juce::SynthesiserVoice
                 // Implement exponential release curve. //////////////////////////////////////////////////////////////
                 // Beware for the case that the note input stopped before reach to sustain level. ////////////////////
                 //////////////////////////////////////////////////////////////////////////////////////////////////////
-                return 0.0f;
+                float k = ( log(-currentLevel + 1.0f) / releaseTime );
+                return exp( k * currentTime ) + currentLevel - 1.0f;
             }
             else
             {
@@ -142,8 +144,12 @@ struct FMVoice   : public juce::SynthesiserVoice
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////
         // Get ADSR value for carrier and modulator. /////////////////////////////////////////////////////////////////
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        float carrierADSR = 1.0f;
-        float modulatorADSR = 1.0f;
+        float carrierADSR = getADSRCurve(   carrierAttackTime, carrierDecayTime,
+                                            carrierSustainLevel, carrierReleaseTime,
+                                            isRelease, currentCarrierLevel);
+        float modulatorADSR = getADSRCurve(   modulatorAttackTime, modulatorDecayTime,
+                                            modulatorSustainLevel, modulatorReleaseTime,
+                                            isRelease, currentModulatorLevel);
         
         if ( !isRelease )
         {
@@ -157,7 +163,7 @@ struct FMVoice   : public juce::SynthesiserVoice
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////
         // Return frequency modulated sound. /////////////////////////////////////////////////////////////////////////
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        return (float) ( std::sin (currentAngle) );
+        return (float) ( carAmp * std::sin(currentAngle + modAmp * std::sin (currentAngle * modulatorFreqRatio)) );
 
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////
         // Problem #2 END ////////////////////////////////////////////////////////////////////////////////////////////
@@ -367,48 +373,48 @@ public:
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////
         if (name == "Brass")
         {
-            presetCarrierAmplitude      = 1.0f;
-            presetCarrierAttackTime     = 0.0f;
-            presetCarrierDecayTime      = 0.01f;
-            presetCarrierSustainLevel   = 1.0f;
-            presetCarrierReleaseTime    = 0.01f;
+            presetCarrierAmplitude      = 1.7f;
+            presetCarrierAttackTime     = 0.11f;
+            presetCarrierDecayTime      = 1.25f;
+            presetCarrierSustainLevel   = 0.5f;
+            presetCarrierReleaseTime    = 0.23f;
             
-            presetModulatorAmplitude    = 0.0f;
+            presetModulatorAmplitude    = 2.1f;
             presetModulatorFreqRatio    = 1.0f;
-            presetModulatorAttackTime   = 0.0f;
-            presetModulatorDecayTime    = 0.01f;
-            presetModulatorSustainLevel = 1.0f;
-            presetModulatorReleaseTime  = 0.01f;
+            presetModulatorAttackTime   = 0.11f;
+            presetModulatorDecayTime    = 1.23f;
+            presetModulatorSustainLevel = 0.35f;
+            presetModulatorReleaseTime  = 0.23f;
         }
         else if (name == "Bell")
         {
-            presetCarrierAmplitude      = 1.0f;
+            presetCarrierAmplitude      = 2.1f;
             presetCarrierAttackTime     = 0.0f;
-            presetCarrierDecayTime      = 0.01f;
-            presetCarrierSustainLevel   = 1.0f;
-            presetCarrierReleaseTime    = 0.01f;
+            presetCarrierDecayTime      = 1.85f;
+            presetCarrierSustainLevel   = 0.1f;
+            presetCarrierReleaseTime    = 2.0f;
             
-            presetModulatorAmplitude    = 0.0f;
-            presetModulatorFreqRatio    = 1.0f;
+            presetModulatorAmplitude    = 1.5f;
+            presetModulatorFreqRatio    = 4.5f;
             presetModulatorAttackTime   = 0.0f;
-            presetModulatorDecayTime    = 0.01f;
-            presetModulatorSustainLevel = 1.0f;
-            presetModulatorReleaseTime  = 0.01f;
+            presetModulatorDecayTime    = 1.85f;
+            presetModulatorSustainLevel = 0.01f;
+            presetModulatorReleaseTime  = 2.0f;
         }
         else if (name == "Electric Piano")
         {
             presetCarrierAmplitude      = 1.0f;
-            presetCarrierAttackTime     = 0.0f;
-            presetCarrierDecayTime      = 0.01f;
-            presetCarrierSustainLevel   = 1.0f;
-            presetCarrierReleaseTime    = 0.01f;
+            presetCarrierAttackTime     = 0.03f;
+            presetCarrierDecayTime      = 2.15f;
+            presetCarrierSustainLevel   = 0.1f;
+            presetCarrierReleaseTime    = 1.0f;
             
-            presetModulatorAmplitude    = 0.0f;
-            presetModulatorFreqRatio    = 1.0f;
-            presetModulatorAttackTime   = 0.0f;
-            presetModulatorDecayTime    = 0.01f;
-            presetModulatorSustainLevel = 1.0f;
-            presetModulatorReleaseTime  = 0.01f;
+            presetModulatorAmplitude    = 1.0f;
+            presetModulatorFreqRatio    = 0.5f;
+            presetModulatorAttackTime   = 0.03f;
+            presetModulatorDecayTime    = 2.15f;
+            presetModulatorSustainLevel = 0.01f;
+            presetModulatorReleaseTime  = 1.0f;
         }
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////
         // Problem #3 END ////////////////////////////////////////////////////////////////////////////////////////////
@@ -423,24 +429,26 @@ public:
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////
         //// Please leave comment here ///////////////////////////////////////////////////////////////////////////////
         ////
-        ////
+        //// Melodion-which was the must-have item when we are in elementary school! 
+        //// I let the attach and release values small and the sustain level high to make the melodion sound. 
+        //// (Reference - https://www.youtube.com/watch?v=ZJ7SByZKDT8)
         ////
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         else if (name == "Your Sound")
         {
-            presetCarrierAmplitude      = 1.0f;
-            presetCarrierAttackTime     = 0.0f;
-            presetCarrierDecayTime      = 0.01f;
-            presetCarrierSustainLevel   = 1.0f;
-            presetCarrierReleaseTime    = 0.01f;
+            presetCarrierAmplitude      = 1.7f;
+            presetCarrierAttackTime     = 0.05f;
+            presetCarrierDecayTime      = 1.0f;
+            presetCarrierSustainLevel   = 0.9f;
+            presetCarrierReleaseTime    = 0.15f;
             
-            presetModulatorAmplitude    = 0.0f;
-            presetModulatorFreqRatio    = 1.0f;
-            presetModulatorAttackTime   = 0.0f;
-            presetModulatorDecayTime    = 0.01f;
-            presetModulatorSustainLevel = 1.0f;
-            presetModulatorReleaseTime  = 0.01f;
+            presetModulatorAmplitude    = 1.8f;
+            presetModulatorFreqRatio    = 3.0f;
+            presetModulatorAttackTime   = 0.07f;
+            presetModulatorDecayTime    = 1.54f;
+            presetModulatorSustainLevel = 0.9f;
+            presetModulatorReleaseTime  = 0.11f;
         }
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////
         // Problem #4 END ////////////////////////////////////////////////////////////////////////////////////////////
@@ -507,7 +515,7 @@ public:
     MainContentComponent()
         : synthAudioSource  (keyboardState),
           keyboardComponent (keyboardState, juce::MidiKeyboardComponent::horizontalKeyboard)
-    {
+    { 
         addAndMakeVisible (carrierAmplitudeSlider);
         carrierAmplitudeSlider.setSliderStyle(juce::Slider::SliderStyle::Rotary);
         carrierAmplitudeSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, true, 60, 20);
